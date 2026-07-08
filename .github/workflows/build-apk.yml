@@ -48,4 +48,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Calm-Tech-Alarm-APK
-          path: alarm-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          path: "**/build/outputs/apk/**/*.apk"
+          
