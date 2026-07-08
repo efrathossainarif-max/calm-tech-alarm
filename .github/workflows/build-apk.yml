@@ -1,0 +1,51 @@
+name: Build Android APK
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install Cordova & Tools
+        run: |
+          npm install -g cordova
+          
+      - name: Create Cordova Project
+        run: |
+          cordova create alarm-app com.arif.calmtech "Calm Tech"
+          cd alarm-app
+          cordova platform add android
+          rm -rf www/*
+          cp ../index.html www/
+          
+      - name: Setup Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Build Android APK
+        run: |
+          cd alarm-app
+          cordova build android --release
+          
+      - name: Upload Output APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Calm-Tech-Alarm-APK
+          path: alarm-app/platforms/android/app/build/outputs/apk/release/app-release-unsigned.apk
