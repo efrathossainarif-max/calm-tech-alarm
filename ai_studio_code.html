@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html class="dark" lang="en">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+    <title>Calm Tech - Dynamic Alarms</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Geist:wght@400;500;600&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-container-lowest": "#0b0f10",
+                        "secondary": "#ffb95f",
+                        "background": "#101415",
+                        "surface": "#101415",
+                        "on-surface": "#e0e3e5",
+                        "on-surface-variant": "#c6c6cd",
+                        "primary": "#bec6e0",
+                        "tertiary": "#cebdff",
+                        "tertiary-container": "#1c0053",
+                        "on-tertiary-container": "#8a6edb",
+                    },
+                    fontFamily: {
+                        "display-time": ["Hanken Grotesk"],
+                        "label-caps": ["Geist"],
+                        "body-md": ["Hanken Grotesk"]
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #101415; color: #e0e3e5; -webkit-font-smoothing: antialiased; overflow-x: hidden; font-family: 'Hanken Grotesk', sans-serif; }
+        .glass-card { background: rgba(255, 255, 255, 0.05); backdrop-filter: blur(24px); border: 1px solid rgba(255, 255, 255, 0.1); }
+        .active-glow { box-shadow: 0 0 40px rgba(255, 185, 95, 0.15); }
+        .view-section { display: none; min-height: 100vh; width: 100%; }
+        .view-section.active { display: flex; flex-direction: column; align-items: center; }
+        .toggle-switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 1.25rem; height: 1.25rem; border-radius: 9999px; background-color: #909097; transition: 0.3s; }
+        .toggle-checkbox:checked + .toggle-switch { background-color: #ffb95f; }
+        .toggle-checkbox:checked + .toggle-switch::after { transform: translateX(1.25rem); background-color: #472a00; }
+        .radial-hand { transform-origin: bottom center; transition: transform 0.1s; }
+        .glow-sphere { animation: pulsate 8s ease-in-out infinite; filter: blur(60px); }
+        @keyframes pulsate { 0%, 100% { transform: scale(1); opacity: 0.2; } 50% { transform: scale(1.3); opacity: 0.4; } }
+        input[type="range"] { -webkit-appearance: none; background: rgba(255,255,255,0.1); height: 4px; border-radius: 2px; }
+        input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; height: 20px; width: 20px; border-radius: 50%; background: #ffb95f; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-background">
+
+    <!-- VIEW 1: DASHBOARD -->
+    <section id="view-dashboard" class="view-section active">
+        <header class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-white/10 flex justify-between items-center px-6 h-16">
+            <span class="material-symbols-outlined text-primary">bedtime</span>
+            <h1 class="text-xl font-bold text-secondary">Alarms</h1>
+            <button class="material-symbols-outlined text-primary">settings</button>
+        </header>
+        
+        <main class="w-full max-w-md px-6 pt-24 pb-32">
+            <div class="text-center mb-10">
+                <div class="text-6xl font-bold tracking-tighter mb-2" id="dash-clock">00:00</div>
+                <span class="bg-tertiary-container/30 text-on-tertiary-container px-3 py-1 rounded-full text-sm">Sleep Mode Active</span>
+            </div>
+            
+            <div id="alarm-list" class="space-y-4">
+                <!-- Alarms injected here -->
+            </div>
+        </main>
+
+        <button onclick="navigateTo('view-set-alarm')" class="fixed bottom-28 right-6 w-14 h-14 bg-secondary text-black rounded-full flex items-center justify-center shadow-xl z-40 active:scale-95 transition-transform">
+            <span class="material-symbols-outlined text-3xl font-bold">add</span>
+        </button>
+
+        <nav class="fixed bottom-0 w-full z-50 bg-background/80 backdrop-blur-xl border-t border-white/10 flex justify-around items-center h-20">
+            <div class="flex flex-col items-center text-secondary"><span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">alarm</span><span class="text-xs">Alarms</span></div>
+            <div class="flex flex-col items-center text-on-surface-variant/60"><span class="material-symbols-outlined">nights_stay</span><span class="text-xs">Sleep</span></div>
+            <div class="flex flex-col items-center text-on-surface-variant/60"><span class="material-symbols-outlined">bar_chart</span><span class="text-xs">Stats</span></div>
+        </nav>
+    </section>
+
+    <!-- VIEW 2: SET ALARM -->
+    <section id="view-set-alarm" class="view-section">
+        <header class="w-full px-6 h-16 flex justify-between items-center">
+            <button onclick="navigateTo('view-dashboard')" class="material-symbols-outlined">close</button>
+            <h1 class="text-lg font-bold">New Alarm</h1>
+            <div class="w-6"></div>
+        </header>
+
+        <main class="flex-grow w-full max-w-lg px-6 pt-10 pb-32 space-y-8">
+            <div class="text-center">
+                <div class="text-7xl font-bold text-white mb-2" id="picker-time-display">07:30</div>
+                <p class="text-secondary font-bold tracking-widest text-sm">WAKE UP TIME</p>
+            </div>
+
+            <div class="relative w-72 h-72 mx-auto glass-card rounded-full flex items-center justify-center touch-none" id="radial-container">
+                <div class="absolute inset-0 p-6 flex justify-between">
+                    <span class="absolute top-4 left-1/2 -translate-x-1/2 text-on-surface-variant">12</span>
+                    <span class="absolute right-4 top-1/2 -translate-y-1/2 text-on-surface-variant">3</span>
+                    <span class="absolute bottom-4 left-1/2 -translate-x-1/2 text-on-surface-variant">6</span>
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-on-surface-variant">9</span>
+                </div>
+                <div class="radial-hand absolute left-1/2 bottom-1/2 w-1 h-24 bg-secondary rounded-full -translate-x-1/2 origin-bottom" id="picker-hand" style="transform: rotate(225deg);">
+                    <div class="absolute -top-3 left-1/2 -translate-x-1/2 w-6 h-6 bg-secondary rounded-full border-4 border-background"></div>
+                </div>
+            </div>
+
+            <div class="space-y-4">
+                <p class="text-xs font-bold text-on-surface-variant tracking-widest uppercase">Repeat Days</p>
+                <div class="flex justify-between" id="day-selector">
+                    <!-- Days M-S -->
+                    <button class="day-btn w-10 h-10 rounded-full border border-white/10 flex items-center justify-center" data-day="1">M</button>
+                    <button class="day-btn w-10 h-10 rounded-full border border-white/10 flex items-center justify-center" data-day="2">T</button>
+                    <button class="day-btn w-10 h-10 rounded-full border border-white/10 flex items-center justify-center" data-day="3">W</button>
+                    <button class="day-btn w-10 h-10 rounded-full border border-white/10 flex items-center justify-center" data-day="4">T</button>
+                    <button class="day-btn w-10 h-10 rounded-full border border-white/10 flex items-center justify-center" data-day="5">F</button>
+                    <button class="day-btn w-10 h-10 rounded-full border border-white/10 flex items-center justify-center" data-day="6">S</button>
+                    <button class="day-btn w-10 h-10 rounded-full border border-white/10 flex items-center justify-center" data-day="0">S</button>
+                </div>
+            </div>
+
+            <div class="glass-card rounded-2xl p-5 flex justify-between items-center">
+                <div class="flex items-center gap-3">
+                    <span class="material-symbols-outlined text-tertiary">graphic_eq</span>
+                    <div>
+                        <p class="font-bold">Anti-Habituation</p>
+                        <p class="text-xs text-on-surface-variant">Random offset: -5 to +10m</p>
+                    </div>
+                </div>
+                <div class="w-12 h-6 bg-secondary/20 rounded-full relative"><div class="absolute right-1 top-1 w-4 h-4 bg-secondary rounded-full"></div></div>
+            </div>
+
+            <button onclick="saveNewAlarm()" class="w-full h-14 bg-secondary text-black font-bold rounded-xl shadow-lg active:scale-95 transition-transform flex items-center justify-center gap-2">
+                <span class="material-symbols-outlined">check</span> SAVE ALARM
+            </button>
+        </main>
+    </section>
+
+    <!-- VIEW 3: WAKE UP -->
+    <section id="view-wake-up" class="view-section relative overflow-hidden">
+        <div class="absolute inset-0 z-0">
+            <div class="glow-sphere absolute top-[-10%] left-[-10%] w-[100vw] h-[100vw] rounded-full bg-secondary"></div>
+            <div class="glow-sphere absolute bottom-[-10%] right-[-10%] w-[80vw] h-[80vw] rounded-full bg-tertiary" style="animation-delay: -3s;"></div>
+        </div>
+
+        <div class="relative z-10 flex flex-col items-center justify-between h-full w-full py-20 px-6">
+            <div class="text-center space-y-4">
+                <h1 class="text-8xl font-bold tracking-tighter" id="wake-clock">07:30</h1>
+                <p class="text-xl text-on-surface-variant" id="wake-date">Wednesday, May 24</p>
+            </div>
+
+            <div class="flex flex-col items-center gap-6 w-full">
+                <div class="glass-card px-8 py-4 rounded-3xl text-center">
+                    <p class="text-secondary text-xs font-bold uppercase tracking-widest mb-1">Playing Tone</p>
+                    <p class="text-xl font-bold" id="active-tone-name">Morning Forest Mist</p>
+                </div>
+
+                <button onclick="snoozeAlarm()" class="w-full py-5 rounded-2xl font-bold text-tertiary border-2 border-tertiary/30 bg-tertiary/5 active:scale-95">
+                    Snooze <span class="opacity-60 font-normal">9m</span>
+                </button>
+
+                <div class="w-full relative h-20 bg-white/10 rounded-[30px] p-2 overflow-hidden" id="dismiss-track">
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-40 uppercase text-xs font-bold tracking-widest">Slide to Dismiss</div>
+                    <div class="absolute left-2 top-2 bottom-2 aspect-square bg-secondary rounded-[24px] flex items-center justify-center cursor-pointer shadow-xl touch-none" id="dismiss-thumb">
+                        <span class="material-symbols-outlined text-black font-bold">chevron_right</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <script>
+        /** STATE MANAGEMENT **/
+        let alarms = JSON.parse(localStorage.getItem('alarms')) || [];
+        let currentView = 'view-dashboard';
+        let selectedTime = "07:30";
+        let selectedDays = [1, 2, 3, 4, 5];
+        let audioPlayer = new Audio();
+        let activeAlarmId = null;
+
+        const tones = [
+            { name: "Morning Forest", url: "https://assets.mixkit.co/music/preview/mixkit-morning-sunrise-247.mp3" },
+            { name: "Soft Chimes", url: "https://assets.mixkit.co/music/preview/mixkit-sun-and-forth-15.mp3" },
+            { name: "Zen Garden", url: "https://assets.mixkit.co/music/preview/mixkit-dreaming-big-31.mp3" },
+            { name: "Ethereal Wake", url: "https://assets.mixkit.co/music/preview/mixkit-serene-view-443.mp3" },
+            { name: "Acoustic Joy", url: "https://assets.mixkit.co/music/preview/mixkit-delightful-520.mp3" }
+        ];
+
+        /** NAVIGATION **/
+        function navigateTo(viewId) {
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            currentView = viewId;
+            if (viewId === 'view-dashboard') renderAlarms();
+        }
+
+        /** ALARM LOGIC **/
+        function saveNewAlarm() {
+            // Anti-Habituation Offset: random between -5 and +10
+            const offset = Math.floor(Math.random() * 16) - 5;
+            
+            // Tone Rotation: Random pick
+            const toneIndex = Math.floor(Math.random() * tones.length);
+
+            const newAlarm = {
+                id: Date.now(),
+                time: selectedTime, // Format "HH:MM"
+                days: [...selectedDays],
+                offset: offset,
+                toneIndex: toneIndex,
+                active: true
+            };
+
+            alarms.push(newAlarm);
+            localStorage.setItem('alarms', JSON.stringify(alarms));
+            navigateTo('view-dashboard');
+        }
+
+        function toggleAlarm(id) {
+            alarms = alarms.map(a => a.id === id ? {...a, active: !a.active} : a);
+            localStorage.setItem('alarms', JSON.stringify(alarms));
+            renderAlarms();
+        }
+
+        function renderAlarms() {
+            const list = document.getElementById('alarm-list');
+            list.innerHTML = alarms.map(alarm => `
+                <div class="glass-card ${alarm.active ? 'active-glow' : 'opacity-50 grayscale'} rounded-xl p-5 flex flex-col gap-3 transition-all">
+                    <div class="flex justify-between items-start">
+                        <div class="flex flex-col">
+                            <span class="text-4xl font-bold">${alarm.time}</span>
+                            <span class="text-[10px] font-bold text-secondary tracking-widest uppercase">Offset Active (${alarm.offset > 0 ? '+' : ''}${alarm.offset}m)</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" class="sr-only toggle-checkbox" ${alarm.active ? 'checked' : ''} onchange="toggleAlarm(${alarm.id})">
+                            <div class="toggle-switch w-11 h-6 bg-white/10 rounded-full transition-colors"></div>
+                        </label>
+                    </div>
+                    <div class="flex gap-2 text-xs font-bold">
+                        ${['S','M','T','W','T','F','S'].map((d, i) => `
+                            <span class="${alarm.days.includes(i) ? 'text-secondary' : 'text-white/20'}">${d}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        /** CLOCK & BACKGROUND CHECKER **/
+        function updateClocks() {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+            if(document.getElementById('dash-clock')) document.getElementById('dash-clock').textContent = timeStr;
+            if(document.getElementById('wake-clock')) document.getElementById('wake-clock').textContent = timeStr;
+            
+            // Check alarms every minute
+            checkAlarms(now);
+        }
+
+        function checkAlarms(now) {
+            if (currentView === 'view-wake-up') return;
+
+            const currentDay = now.getDay();
+            const currentHour = now.getHours();
+            const currentMin = now.getMinutes();
+
+            alarms.forEach(alarm => {
+                if (!alarm.active) return;
+                if (!alarm.days.includes(currentDay)) return;
+
+                const [aHour, aMin] = alarm.time.split(':').map(Number);
+                
+                // Calculate target time with offset
+                let targetMin = aMin + alarm.offset;
+                let targetHour = aHour;
+
+                if (targetMin >= 60) { targetMin -= 60; targetHour++; }
+                if (targetMin < 0) { targetMin += 60; targetHour--; }
+
+                if (currentHour === targetHour && currentMin === targetMin) {
+                    triggerAlarm(alarm);
+                }
+            });
+        }
+
+        function triggerAlarm(alarm) {
+            activeAlarmId = alarm.id;
+            const tone = tones[alarm.toneIndex];
+            document.getElementById('active-tone-name').textContent = tone.name;
+            
+            audioPlayer.src = tone.url;
+            audioPlayer.loop = true;
+            audioPlayer.play().catch(e => console.log("Audio pending interaction"));
+            
+            navigateTo('view-wake-up');
+        }
+
+        function snoozeAlarm() {
+            audioPlayer.pause();
+            // Simple 9m snooze logic: find active alarm and adjust it or just close view
+            navigateTo('view-dashboard');
+        }
+
+        /** RADIAL PICKER LOGIC **/
+        const container = document.getElementById('radial-container');
+        const hand = document.getElementById('picker-hand');
+        const timeDisplay = document.getElementById('picker-time-display');
+        let isDragging = false;
+
+        function updatePicker(e) {
+            if (!isDragging) return;
+            const rect = container.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            let angle = Math.atan2(clientY - centerY, clientX - centerX) * (180 / Math.PI) + 90;
+            if (angle < 0) angle += 360;
+
+            // Snap to 15-min increments (7.5 degrees per 15 mins)
+            angle = Math.round(angle / 7.5) * 7.5;
+            hand.style.transform = `rotate(${angle}deg)`;
+
+            // Convert angle to time
+            const totalMinutes = Math.round((angle / 360) * 720); // 12 hours
+            const h = Math.floor(totalMinutes / 60) || 12;
+            const m = Math.floor(totalMinutes % 60);
+            selectedTime = `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+            timeDisplay.textContent = selectedTime;
+        }
+
+        container.addEventListener('mousedown', () => isDragging = true);
+        container.addEventListener('touchstart', () => isDragging = true);
+        window.addEventListener('mouseup', () => isDragging = false);
+        window.addEventListener('touchend', () => isDragging = false);
+        window.addEventListener('mousemove', updatePicker);
+        window.addEventListener('touchmove', (e) => { if(isDragging) e.preventDefault(); updatePicker(e); }, {passive: false});
+
+        /** DISMISS SLIDER LOGIC **/
+        const thumb = document.getElementById('dismiss-thumb');
+        const track = document.getElementById('dismiss-track');
+        let startX = 0;
+
+        thumb.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].pageX;
+            thumb.style.transition = 'none';
+        });
+
+        thumb.addEventListener('touchmove', (e) => {
+            const x = e.touches[0].pageX - startX;
+            const limit = track.clientWidth - thumb.clientWidth - 16;
+            const move = Math.max(0, Math.min(x, limit));
+            thumb.style.transform = `translateX(${move}px)`;
+            if (move >= limit * 0.9) {
+                audioPlayer.pause();
+                navigateTo('view-dashboard');
+                thumb.style.transform = `translateX(0px)`;
+            }
+        });
+
+        thumb.addEventListener('touchend', () => {
+            thumb.style.transition = '0.3s';
+            thumb.style.transform = `translateX(0px)`;
+        });
+
+        /** DAY SELECTOR **/
+        document.querySelectorAll('.day-btn').forEach(btn => {
+            const day = parseInt(btn.dataset.day);
+            if(selectedDays.includes(day)) btn.classList.add('bg-secondary', 'text-black');
+            
+            btn.addEventListener('click', () => {
+                if(selectedDays.includes(day)) {
+                    selectedDays = selectedDays.filter(d => d !== day);
+                    btn.classList.remove('bg-secondary', 'text-black');
+                } else {
+                    selectedDays.push(day);
+                    btn.classList.add('bg-secondary', 'text-black');
+                }
+            });
+        });
+
+        /** INIT **/
+        setInterval(updateClocks, 1000);
+        updateClocks();
+        renderAlarms();
+
+    </script>
+</body>
+</html>
